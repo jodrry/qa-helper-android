@@ -60,7 +60,8 @@ class QaStore(context: Context) {
         var safeRecord = record
         var thumbnailDropped = false
 
-        if (safeRecord.imageThumb != null && safeRecord.imageThumb.length > MAX_THUMB_CHARS) {
+        val initialThumb = safeRecord.imageThumb
+        if (initialThumb != null && initialThumb.length > MAX_THUMB_CHARS) {
             safeRecord = safeRecord.copy(imageThumb = null)
             thumbnailDropped = true
         }
