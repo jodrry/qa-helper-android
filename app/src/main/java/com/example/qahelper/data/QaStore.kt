@@ -121,6 +121,48 @@ class QaStore(context: Context) {
         return emptyList()
     }
 
+    fun loadChat(): List<ChatMessage> {
+        val raw = prefs.getString(KEY_CHAT, null) ?: return emptyList()
+        return runCatching {
+            val array = JSONArray(raw)
+            buildList {
+                for (index in 0 until array.length()) {
+                    val item = array.optJSONObject(index) ?: continue
+                    val role = item.optString("role")
+                    if (role != CHAT_ROLE_USER && role != CHAT_ROLE_ASSISTANT) continue
+                    val content = item.optString("content")
+                    if (content.isBlank()) continue
+                    add(
+                        ChatMessage(
+                            role = role,
+                            content = content,
+                            createdAt = item.optLong("createdAt", 0L)
+                        )
+                    )
+                }
+            }
+                .sortedBy { it.createdAt }
+                .takeLast(MAX_CHAT_MESSAGES)
+        }.getOrDefault(emptyList())
+    }
+
+    fun saveChat(messages: List<ChatMessage>) {
+        val array = JSONArray()
+        messages.takeLast(MAX_CHAT_MESSAGES).forEach { message ->
+            array.put(
+                JSONObject()
+                    .put("role", message.role)
+                    .put("content", message.content)
+                    .put("createdAt", message.createdAt)
+            )
+        }
+        prefs.edit().putString(KEY_CHAT, array.toString()).apply()
+    }
+
+    fun clearChat() {
+        prefs.edit().remove(KEY_CHAT).apply()
+    }
+
     fun saveHistory(records: List<QaRecord>) {
         val limited = records.sortedByDescending { it.createdAt }.toMutableList()
         trimToMaxCount(limited)
@@ -198,9 +240,11 @@ class QaStore(context: Context) {
     companion object {
         const val KEY_HISTORY = "qa_app_history_v1"
         const val KEY_SETTINGS = "qa_app_settings_v1"
+        const val KEY_CHAT = "qa_app_chat_v1"
         private const val PREFS_NAME = "qa_app_prefs_v1"
         private const val KEY_FIRST_LAUNCH_DONE = "qa_app_first_launch_done_v1"
         private const val MAX_RECORDS = 200
+        private const val MAX_CHAT_MESSAGES = 100
         private const val MAX_THUMB_CHARS = 20_000
         private const val MAX_STORE_BYTES = 1_200_000
     }

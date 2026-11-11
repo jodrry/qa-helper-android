@@ -1,6 +1,6 @@
 # 答题助手（qa-helper-android）
 
-一个纯原生的 Android 答题助手示例：拍照搜题、AI 文字解答、模拟流式输出、本地历史记录和可配置的 OpenAI 兼容接口。项目默认开启模拟模式，没有 API Key 也能完整演示。
+一个纯原生的 Android 答题助手示例：拍照搜题、AI 文字解答、多轮对话答疑、模拟流式输出、本地历史记录和可配置的 OpenAI 兼容接口。项目默认开启模拟模式，没有 API Key 也能完整演示。
 
 - 包名：`com.example.qahelper`
 - 应用名：答题助手
@@ -16,6 +16,7 @@
 
 - 上方大卡片：拍照搜题模式
 - 下方大卡片：AI 解答模式
+- 第三个模式：对话答疑模式（支持连续追问）
 - 最近答案区域展示最近 3 条记录，点击进入详情
 - 顶部提供设置入口，悬浮按钮和顶部按钮均可进入历史记录
 
@@ -36,6 +37,15 @@
 - 硬件键盘 Ctrl+Enter 提交
 - 答案使用打字机效果逐字展示
 - 自动保存历史；失败可重试
+
+### 对话答疑
+
+- 围绕同一道题连续追问，自动携带最近 12 条 user/assistant 消息作为上下文
+- 用户/助手气泡区分，自动滚动到最新消息
+- 支持 Ctrl+Enter 发送、失败重试、清空当前对话二次确认
+- 每轮助手回答自动保存到历史记录（type 仍为 `ai`）
+- 对话上下文保存在 `SharedPreferences`，key：`qa_app_chat_v1`
+- 模拟模式会显示已携带的上下文轮次，便于演示多轮交互
 
 ### 历史记录
 
@@ -149,6 +159,7 @@ gradle assembleDebug
 │       │   ├── MainActivity.kt
 │       │   ├── data
 │       │   │   ├── AppSettings.kt
+│       │   │   ├── ChatMessage.kt
 │       │   │   ├── QaRecord.kt
 │       │   │   └── QaStore.kt
 │       │   ├── network
@@ -156,6 +167,7 @@ gradle assembleDebug
 │       │   │   └── QaApi.kt
 │       │   ├── ui
 │       │   │   ├── AiScreen.kt
+│       │   │   ├── ChatScreen.kt
 │       │   │   ├── DetailScreen.kt
 │       │   │   ├── HistoryScreen.kt
 │       │   │   ├── HomeScreen.kt

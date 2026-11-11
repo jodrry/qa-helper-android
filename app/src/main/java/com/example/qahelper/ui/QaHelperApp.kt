@@ -18,15 +18,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.qahelper.data.AppSettings
+import com.example.qahelper.data.ChatMessage
 import com.example.qahelper.data.QaRecord
 import com.example.qahelper.data.QaStore
-import com.example.qahelper.ui.components.formatRecordTime
 
 private sealed interface Screen {
     data object Home : Screen
     data object Photo : Screen
     data object Ai : Screen
+    data object Chat : Screen
     data object History : Screen
     data object Settings : Screen
     data class Detail(val id: String) : Screen
@@ -39,6 +39,7 @@ fun QaHelperApp() {
 
     var settings by remember { mutableStateOf(store.loadSettings()) }
     var history by remember { mutableStateOf(store.loadHistory()) }
+    var chatMessages by remember { mutableStateOf(store.loadChat()) }
     var screen by remember { mutableStateOf<Screen>(Screen.Home) }
     val backStack = remember { mutableStateListOf<Screen>() }
     var showFirstLaunchTip by remember { mutableStateOf(store.isFirstLaunch()) }
@@ -73,6 +74,7 @@ fun QaHelperApp() {
             settings = settings,
             onOpenPhoto = { navigate(Screen.Photo) },
             onOpenAi = { navigate(Screen.Ai) },
+            onOpenChat = { navigate(Screen.Chat) },
             onOpenHistory = { navigate(Screen.History) },
             onOpenSettings = { navigate(Screen.Settings) },
             onOpenRecord = { navigate(Screen.Detail(it.id)) }
@@ -89,6 +91,18 @@ fun QaHelperApp() {
             settings = settings,
             onBack = { goBack() },
             onSaveRecord = { record -> saveRecord(record) },
+            onOpenHistory = { navigate(Screen.History) }
+        )
+
+        Screen.Chat -> ChatScreen(
+            settings = settings,
+            messages = chatMessages,
+            onMessagesChange = { updated ->
+                chatMessages = updated
+                store.saveChat(updated)
+            },
+            onSaveRecord = { record -> saveRecord(record) },
+            onBack = { goBack() },
             onOpenHistory = { navigate(Screen.History) }
         )
 

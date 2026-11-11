@@ -53,6 +53,7 @@ fun HomeScreen(
     settings: AppSettings,
     onOpenPhoto: () -> Unit,
     onOpenAi: () -> Unit,
+    onOpenChat: () -> Unit,
     onOpenHistory: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenRecord: (QaRecord) -> Unit
@@ -118,6 +119,14 @@ fun HomeScreen(
                 subtitle = "直接输入题目，分步骤解答并模拟流式输出",
                 colors = listOf(Color(0xFF2F6BE8), BrandBlue, Color(0xFF53A6FF)),
                 onClick = onOpenAi
+            )
+            Spacer(Modifier.height(14.dp))
+            ModeCard(
+                emoji = "💬",
+                title = "对话答疑模式",
+                subtitle = "围绕一道题连续追问，带着上下文深入讲解",
+                colors = listOf(Color(0xFF0E8F83), Color(0xFF18A99A), Color(0xFF31B5D8)),
+                onClick = onOpenChat
             )
 
             Spacer(Modifier.height(26.dp))

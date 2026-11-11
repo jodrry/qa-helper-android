@@ -15,16 +15,23 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 
+data class ChatTurn(
+    val role: String,
+    val content: String
+)
+
 class QaApiException(message: String) : Exception(message)
 
 /**
  * OpenAI 兼容 /chat/completions 接口封装。
- * 后续如果要换成别的服务，只需要替换 answerQuestion 的内部实现。
+ * 单轮答题和多轮对话共用同一套网络与错误处理，方便后续替换服务。
  */
 object QaApi {
 
     private const val SYSTEM_PROMPT =
         "你是一个严谨的答题助手，请给出清晰、分步骤的解答。"
+
+    private const val MAX_CONTEXT_MESSAGES = 12
 
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
@@ -44,11 +51,43 @@ object QaApi {
         type: String = TYPE_PHOTO
     ): String {
         val hasImage = !imageBase64.isNullOrBlank() && settings.multimodalEnabled
-
         if (settings.isMockMode) {
             return MockAnswer.build(question, type, hasImage)
         }
+        return requestCompletion(
+            settings = settings,
+            messages = buildMessages(
+                question = question,
+                imageBase64 = if (hasImage) imageBase64 else null
+            )
+        )
+    }
 
+    /**
+     * 多轮对话：把最近 12 条 user/assistant 消息作为上下文发送。
+     */
+    suspend fun chat(
+        settings: AppSettings,
+        history: List<ChatTurn>,
+        question: String
+    ): String {
+        val context = history
+            .filter { it.content.isNotBlank() }
+            .takeLast(MAX_CONTEXT_MESSAGES)
+
+        if (settings.isMockMode) {
+            return MockAnswer.buildChat(question, context)
+        }
+        return requestCompletion(
+            settings = settings,
+            messages = buildChatMessages(context, question)
+        )
+    }
+
+    private suspend fun requestCompletion(
+        settings: AppSettings,
+        messages: JSONArray
+    ): String {
         val endpoint = settings.endpoint.trim()
         if (endpoint.isBlank()) {
             throw QaApiException("接口地址为空，请先到设置中填写 API Endpoint。")
@@ -62,9 +101,8 @@ object QaApi {
                 executeRequest(
                     endpoint = endpoint,
                     apiKey = settings.apiKey.trim(),
-                    model = settings.model.trim(),
-                    question = question,
-                    imageBase64 = if (hasImage) imageBase64 else null
+                    model = settings.model.trim().ifBlank { AppSettings.DEFAULT_MODEL },
+                    messages = messages
                 )
             } catch (error: QaApiException) {
                 throw error
@@ -86,12 +124,11 @@ object QaApi {
         endpoint: String,
         apiKey: String,
         model: String,
-        question: String,
-        imageBase64: String?
+        messages: JSONArray
     ): String {
         val payload = JSONObject()
             .put("model", model)
-            .put("messages", buildMessages(question, imageBase64))
+            .put("messages", messages)
             .put("temperature", 0.3)
 
         val request = Request.Builder()
@@ -167,6 +204,32 @@ object QaApi {
         }
 
         messages.put(userMessage)
+        return messages
+    }
+
+    private fun buildChatMessages(history: List<ChatTurn>, question: String): JSONArray {
+        val messages = JSONArray()
+        messages.put(
+            JSONObject()
+                .put("role", "system")
+                .put("content", SYSTEM_PROMPT)
+        )
+
+        history.forEach { turn ->
+            if ((turn.role == "user" || turn.role == "assistant") && turn.content.isNotBlank()) {
+                messages.put(
+                    JSONObject()
+                        .put("role", turn.role)
+                        .put("content", turn.content)
+                )
+            }
+        }
+
+        messages.put(
+            JSONObject()
+                .put("role", "user")
+                .put("content", question.trim())
+        )
         return messages
     }
 
