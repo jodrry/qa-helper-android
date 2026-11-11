@@ -76,6 +76,9 @@ fun PhotoScreen(
 
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
+    var previewFailure by remember { mutableStateOf<String?>(null) }
+    var previewRetry by remember { mutableStateOf(0) }
+    var picking by remember { mutableStateOf(false) }
     var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
     var question by rememberSaveable { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
@@ -91,6 +94,8 @@ fun PhotoScreen(
         val uri = pendingCameraUri
         if (success && uri != null) {
             imageUri = uri
+            previewFailure = null
+            previewRetry = 0
             answer = null
             error = null
             savedThumbnailNotice = false
@@ -102,31 +107,48 @@ fun PhotoScreen(
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
-        if (uri != null) {
-            imageUri = uri
-            answer = null
-            error = null
-            savedThumbnailNotice = false
-        } else {
+        if (uri == null) {
             context.showToast("未选择图片")
+        } else {
+            picking = true
+            previewFailure = null
+            scope.launch {
+                try {
+                    // 必须在选择结果回调后尽快读取，避免个别系统的 URI 授权过期。
+                    val localUri = withContext(Dispatchers.IO) {
+                        ImageUtils.copyToCache(context, uri)
+                    }
+                    imageUri = localUri
+                    previewRetry = 0
+                    answer = null
+                    error = null
+                    savedThumbnailNotice = false
+                } catch (exception: Exception) {
+                    context.showToast(exception.message ?: "读取图片失败，请重新选择")
+                } finally {
+                    picking = false
+                }
+            }
         }
     }
 
-    LaunchedEffect(imageUri) {
+    LaunchedEffect(imageUri, previewRetry) {
         preview = null
+        previewFailure = null
         val uri = imageUri ?: return@LaunchedEffect
         val bitmap = withContext(Dispatchers.IO) {
             ImageUtils.decodePreview(context, uri, 1024)
         }
         if (bitmap == null) {
-            context.showToast("图片预览失败，请重新选择")
+            previewFailure = "图片预览失败，请重试或更换图片"
+            context.showToast("图片预览失败，请重试或更换图片")
         } else {
             preview = bitmap.asImageBitmap()
         }
     }
 
     fun launchCamera() {
-        if (loading) return
+        if (loading || picking) return
         try {
             val uri = ImageUtils.createCameraUri(context)
             pendingCameraUri = uri
@@ -137,7 +159,7 @@ fun PhotoScreen(
     }
 
     fun launchGallery() {
-        if (loading) return
+        if (loading || picking) return
         try {
             galleryLauncher.launch("image/*")
         } catch (exception: Exception) {
@@ -264,15 +286,31 @@ fun PhotoScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         val image = preview
-                        if (image != null) {
-                            Image(
+                        when {
+                            picking -> Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(20.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(28.dp),
+                                    strokeWidth = 3.dp
+                                )
+                                Spacer(Modifier.height(10.dp))
+                                Text(
+                                    text = "正在读取图片...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            image != null -> Image(
                                 bitmap = image,
                                 contentDescription = "题目图片预览",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Fit
                             )
-                        } else {
-                            Column(
+
+                            else -> Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.padding(20.dp)
                             ) {
@@ -285,12 +323,24 @@ fun PhotoScreen(
                                     textAlign = TextAlign.Center
                                 )
                                 Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = "图片会自动压缩，最长边不超过 1024",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
-                                )
+                                if (previewFailure == null) {
+                                    Text(
+                                        text = "图片会自动压缩，最长边不超过 1024",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center
+                                    )
+                                } else {
+                                    Text(
+                                        text = previewFailure.orEmpty(),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.error,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    TextButton(onClick = { previewRetry++ }) {
+                                        Text("重试预览")
+                                    }
+                                }
                             }
                         }
                     }
@@ -303,14 +353,14 @@ fun PhotoScreen(
                         Button(
                             onClick = { launchCamera() },
                             modifier = Modifier.weight(1f),
-                            enabled = !loading
+                            enabled = !loading && !picking
                         ) {
                             Text("拍照")
                         }
                         OutlinedButton(
                             onClick = { launchGallery() },
                             modifier = Modifier.weight(1f),
-                            enabled = !loading
+                            enabled = !loading && !picking
                         ) {
                             Text("从相册选择")
                         }
@@ -328,7 +378,7 @@ fun PhotoScreen(
                 minLines = 3,
                 maxLines = 6,
                 shape = RoundedCornerShape(18.dp),
-                enabled = !loading
+                enabled = !loading && !picking
             )
 
             Spacer(Modifier.height(14.dp))
@@ -337,7 +387,7 @@ fun PhotoScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                enabled = !loading && (imageUri != null || question.isNotBlank())
+                enabled = !loading && !picking && (imageUri != null || question.isNotBlank())
             ) {
                 if (loading) {
                     CircularProgressIndicator(
