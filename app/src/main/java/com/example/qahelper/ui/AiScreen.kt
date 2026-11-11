@@ -237,7 +237,8 @@ fun AiScreen(
                 AnswerCard(
                     answer = answer.orEmpty(),
                     isMock = isMock,
-                    typing = true
+                    typing = true,
+                    richText = true
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),

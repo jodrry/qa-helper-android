@@ -315,6 +315,7 @@ fun AnswerCard(
     answer: String,
     isMock: Boolean,
     typing: Boolean,
+    richText: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var visibleChars by remember(answer, typing) {
@@ -383,17 +384,24 @@ fun AnswerCard(
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
             )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { visibleChars = answer.length }
-            ) {
-                SelectionContainer {
-                    Text(
-                        text = answer.take(visibleChars) + if (finished) "" else "▍",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+            if (richText && (!typing || finished)) {
+                RichMarkdownText(
+                    markdown = answer,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { visibleChars = answer.length }
+                ) {
+                    SelectionContainer {
+                        Text(
+                            text = answer.take(visibleChars) + if (finished) "" else "▍",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
 

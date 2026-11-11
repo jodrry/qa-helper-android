@@ -1,6 +1,6 @@
 # 答题助手（qa-helper-android）
 
-一个纯原生的 Android 答题助手示例：拍照搜题、AI 文字解答、多轮对话答疑、模拟流式输出、本地历史记录和可配置的 OpenAI 兼容接口。项目默认开启模拟模式，没有 API Key 也能完整演示。
+一个纯原生的 Android 答题助手示例：拍照搜题、AI 文字解答、多轮对话答疑、模拟流式输出、Markdown/LaTeX 富文本答案、本地历史记录和可配置的 OpenAI 兼容接口。项目默认开启模拟模式，没有 API Key 也能完整演示。
 
 - 包名：`com.example.qahelper`
 - 应用名：答题助手
@@ -8,6 +8,7 @@
 - minSdk 24 / targetSdk 34 / compileSdk 34
 - JDK 17 / Gradle 8.7 / AGP 8.5.2 / Kotlin 1.9.24
 - Compose BOM 2024.06.00
+- Markwon 4.6.2（Markdown + LaTeX 渲染）
 - 不包含 Firebase、付费 OCR SDK、本地大模型或 WebView
 
 ## 功能
@@ -46,6 +47,14 @@
 - 每轮助手回答自动保存到历史记录（type 仍为 `ai`）
 - 对话上下文保存在 `SharedPreferences`，key：`qa_app_chat_v1`
 - 模拟模式会显示已携带的上下文轮次，便于演示多轮交互
+
+### 答案富文本渲染
+
+- 详情页、拍照搜题和 AI 解答的答案支持 Markdown：加粗、斜体、标题、列表、引用、行内代码、代码块、链接
+- 支持 LaTeX 行内公式 `$...$`、`\(...\)`，以及块级公式 `$$...$$`、`\[...\]`
+- 渲染颜色、代码块背景、字号跟随 Material3 深色/浅色主题
+- Markdown 在原生 TextView 中渲染，不使用 WebView
+- LaTeX 依赖 Markwon `ext-latex`，其传递依赖 `jlatexmath-android` 为 GPL-2.0；如需闭源分发请先评估许可证或替换渲染器
 
 ### 历史记录
 
@@ -175,6 +184,7 @@ gradle assembleDebug
 │       │   │   ├── QaHelperApp.kt
 │       │   │   ├── SettingsScreen.kt
 │       │   │   ├── components/QaComponents.kt
+│       │   │   ├── components/RichMarkdownText.kt
 │       │   │   └── theme/{Color,Theme,Type}.kt
 │       │   └── util
 │       │       ├── AndroidUi.kt

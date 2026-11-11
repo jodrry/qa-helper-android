@@ -165,7 +165,8 @@ fun DetailScreen(
             AnswerCard(
                 answer = record.answer,
                 isMock = record.answer.contains("【模拟模式】"),
-                typing = false
+                typing = false,
+                richText = true
             )
 
             Spacer(Modifier.height(14.dp))

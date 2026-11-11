@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.qahelper"
         minSdk = 24
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.1.0"
+        versionCode = 4
+        versionName = "1.2.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -68,6 +68,11 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // Markdown + LaTeX 渲染。ext-latex 内部使用 jlatexmath-android。
+    implementation("io.noties.markwon:core:4.6.2")
+    implementation("io.noties.markwon:inline-parser:4.6.2")
+    implementation("io.noties.markwon:ext-latex:4.6.2")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

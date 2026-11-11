@@ -426,7 +426,8 @@ fun PhotoScreen(
                 AnswerCard(
                     answer = answer.orEmpty(),
                     isMock = isMock,
-                    typing = false
+                    typing = false,
+                    richText = true
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(
