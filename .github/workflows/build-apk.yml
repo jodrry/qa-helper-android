@@ -1,0 +1,54 @@
+name: Build Debug APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build qa-helper debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Upload debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-helper-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Build summary
+        if: always()
+        run: |
+          echo "## 答题助手构建结果" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+            ls -lh app/build/outputs/apk/debug/app-debug.apk
+            echo "- APK: \`app/build/outputs/apk/debug/app-debug.apk\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "- 状态: 构建成功" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- 状态: 构建失败（未找到 APK）" >> "$GITHUB_STEP_SUMMARY"
+          fi
